@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Plus, Upload, Moon, Sun, Menu, 
   Trash2, Edit2, Loader2, Cloud, CheckCircle2, AlertCircle, Monitor,
-  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink
+  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import {
   DndContext,
@@ -59,6 +60,8 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const sidebarWidthClass = isSidebarCollapsed ? 'w-64 lg:w-20' : 'w-64 lg:w-64';
   
   // Search Mode State
   const [searchMode, setSearchMode] = useState<SearchMode>('external');
@@ -134,6 +137,8 @@ function App() {
     return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   }, []);
   const shouldVerifyCategoryAction = !isLocalDev && requiresAuth !== false;
+  const navTitleText = siteSettings.navTitle || 'CloudNav';
+  const navTitleShort = navTitleText.slice(0, 2);
   
   // Sort State
   const [isSortingMode, setIsSortingMode] = useState<string | null>(null); // 存储正在排序的分类ID，null表示不在排序模式
@@ -2101,34 +2106,49 @@ function App() {
       {/* Sidebar */}
       <aside 
         className={`
-          fixed lg:static inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out
+          fixed lg:static inset-y-0 left-0 z-30 ${sidebarWidthClass} transform transition-all duration-300 ease-in-out
           bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-700 shrink-0">
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-              {siteSettings.navTitle || 'CloudNav'}
+        <div className={`h-16 flex items-center border-b border-slate-100 dark:border-slate-700 shrink-0 relative ${isSidebarCollapsed ? 'justify-center px-2' : 'px-6'}`}>
+            <span className={`text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent ${isSidebarCollapsed ? 'text-base px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700' : ''}`}>
+              {isSidebarCollapsed ? navTitleShort : navTitleText}
             </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsSidebarCollapsed(prev => !prev); }}
+              className="hidden lg:inline-flex absolute right-2 p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+              title={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+              aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+            >
+              {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
         </div>
 
         {/* Categories List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-hide">
+        <div className={`flex-1 overflow-y-auto space-y-1 scrollbar-hide ${isSidebarCollapsed ? 'px-2 py-4' : 'p-4'}`}>
             <button
               onClick={() => { setSelectedCategory('all'); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              title="置顶网站"
+              className={`rounded-xl transition-all ${isSidebarCollapsed ? 'w-full flex items-center justify-center px-2 py-3' : 'w-full flex items-center gap-3 px-4 py-3'} ${
                 selectedCategory === 'all' 
                   ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
-              <div className="p-1"><Icon name="LayoutGrid" size={18} /></div>
-              <span>置顶网站</span>
+              <div className={`${isSidebarCollapsed ? 'p-2.5 rounded-xl' : 'p-1'} ${selectedCategory === 'all' ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center`}>
+                <Icon name="LayoutGrid" size={18} />
+              </div>
+              {!isSidebarCollapsed && <span>置顶网站</span>}
             </button>
             
-            <div className="flex items-center justify-between pt-4 pb-2 px-4">
-               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">分类目录</span>
+            <div className={`flex items-center pt-4 pb-2 ${isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
+               {!isSidebarCollapsed && (
+                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                   分类目录
+                 </span>
+               )}
                <button 
                   onClick={() => { if(!authToken) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
                   className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
@@ -2140,28 +2160,36 @@ function App() {
 
             {categories.map(cat => {
                 const isLocked = cat.password && !unlockedCategoryIds.has(cat.id);
+                const categoryBaseClasses = isSidebarCollapsed
+                  ? 'w-full flex items-center justify-center gap-0 px-2.5 py-2.5'
+                  : 'w-full flex items-center gap-3 px-4 py-2.5';
+                const selectedClasses = selectedCategory === cat.id
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700';
                 return (
                   <button
                     key={cat.id}
                     onClick={() => handleCategoryClick(cat)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group ${
-                      selectedCategory === cat.id 
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
+                    title={isSidebarCollapsed ? cat.name : undefined}
+                    className={`rounded-xl transition-all group ${categoryBaseClasses} ${selectedClasses}`}
                   >
-                    <div className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                    <div className={`${isSidebarCollapsed ? 'p-2.5 rounded-xl' : 'p-1.5 rounded-lg'} transition-colors flex items-center justify-center ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
                       {isLocked ? <Lock size={16} className="text-amber-500" /> : <Icon name={cat.icon} size={16} />}
                     </div>
-                    <span className="truncate flex-1 text-left">{cat.name}</span>
-                    {selectedCategory === cat.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>}
+                    {!isSidebarCollapsed && (
+                      <span className="truncate flex-1 text-left">{cat.name}</span>
+                    )}
+                    {!isSidebarCollapsed && selectedCategory === cat.id && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                    )}
                   </button>
                 );
             })}
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+        {!isSidebarCollapsed && (
+          <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
             
             <div className="grid grid-cols-3 gap-2 mb-2">
                 <button 
@@ -2211,7 +2239,8 @@ function App() {
                  <span>Fork 项目 v1.7</span>
                </a>
             </div>
-        </div>
+          </div>
+        )}
       </aside>
 
       {/* Main Content */}
