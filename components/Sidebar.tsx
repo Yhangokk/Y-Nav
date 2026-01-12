@@ -46,10 +46,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}
     >
-      <div className={`h-16 flex items-center border-b border-slate-100/80 dark:border-white/10 shrink-0 relative ${isSidebarCollapsed ? 'justify-center px-2' : 'px-6'}`}>
-        <span className={`text-xl font-semibold bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent ${isSidebarCollapsed ? 'text-base px-2 py-1 rounded-lg bg-slate-100/70 dark:bg-slate-800/70' : ''}`}>
-          {isSidebarCollapsed ? navTitleShort : navTitleText}
-        </span>
+      <div className={`h-14 flex items-center border-b border-slate-100/80 dark:border-white/10 shrink-0 relative ${isSidebarCollapsed ? 'justify-center px-2' : 'px-4'}`}>
+        <div className={`flex items-center ${isSidebarCollapsed ? '' : 'gap-2'}`}>
+          <div className="h-7 w-7 rounded-lg bg-slate-100/70 dark:bg-slate-800/70 border border-slate-200/70 dark:border-white/10 flex items-center justify-center text-xs font-mono text-slate-500 dark:text-slate-300">
+            Y
+          </div>
+        </div>
         <button
           onClick={onToggleCollapsed}
           className="hidden lg:inline-flex absolute right-2 p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
@@ -64,13 +66,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onSelectAll}
           title="置顶网站"
-          className={`rounded-xl transition-all ${isSidebarCollapsed ? 'w-full flex items-center justify-center px-2 py-3' : 'w-full flex items-center gap-3 px-4 py-3'} ${
+          className={`relative rounded-xl transition-all ${isSidebarCollapsed ? 'w-full flex items-center justify-center px-2 py-3' : 'w-full flex items-center gap-3 px-4 py-3'} ${
             selectedCategory === 'all'
-              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+              ? 'bg-slate-100/60 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50/70 dark:hover:bg-white/5'
           }`}
         >
-          <div className={`${isSidebarCollapsed ? 'p-2.5 rounded-xl' : 'p-1'} ${selectedCategory === 'all' ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center`}>
+          {!isSidebarCollapsed && selectedCategory === 'all' && (
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full bg-accent"></span>
+          )}
+          <div className={`${isSidebarCollapsed ? 'p-2.5 rounded-xl' : 'p-1'} ${selectedCategory === 'all' ? 'bg-accent/15 text-accent' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center`}>
             <Icon name="LayoutGrid" size={18} />
           </div>
           {!isSidebarCollapsed && <span>置顶网站</span>}
@@ -84,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
           <button
             onClick={onOpenCategoryManager}
-            className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+            className="p-1 text-slate-400 hover:text-accent hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
             title="管理分类"
           >
             <Settings size={14} />
@@ -96,23 +101,23 @@ const Sidebar: React.FC<SidebarProps> = ({
             ? 'w-full flex items-center justify-center gap-0 px-2.5 py-2.5'
             : 'w-full flex items-center gap-3 px-4 py-2.5';
           const selectedClasses = selectedCategory === cat.id
-            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
-            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700';
+            ? 'bg-slate-100/60 dark:bg-white/5 text-slate-900 dark:text-slate-100 font-medium'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50/70 dark:hover:bg-white/5';
           return (
             <button
               key={cat.id}
               onClick={() => onSelectCategory(cat)}
               title={isSidebarCollapsed ? cat.name : undefined}
-              className={`rounded-xl transition-all group ${categoryBaseClasses} ${selectedClasses}`}
+              className={`relative rounded-xl transition-all group ${categoryBaseClasses} ${selectedClasses}`}
             >
-              <div className={`${isSidebarCollapsed ? 'p-2.5 rounded-xl' : 'p-1.5 rounded-lg'} transition-colors flex items-center justify-center ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
+              {!isSidebarCollapsed && selectedCategory === cat.id && (
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full bg-accent"></span>
+              )}
+              <div className={`${isSidebarCollapsed ? 'p-2.5 rounded-xl' : 'p-1.5 rounded-lg'} transition-colors flex items-center justify-center ${selectedCategory === cat.id ? 'bg-accent/15 text-accent' : 'bg-slate-100 dark:bg-slate-800'}`}>
                 <Icon name={cat.icon} size={16} />
               </div>
               {!isSidebarCollapsed && (
                 <span className="truncate flex-1 text-left">{cat.name}</span>
-              )}
-              {!isSidebarCollapsed && selectedCategory === cat.id && (
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
               )}
             </button>
           );
@@ -121,37 +126,32 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {!isSidebarCollapsed && (
         <div className="p-4 border-t border-slate-200/60 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 shrink-0">
-          <div className="grid grid-cols-3 gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <button
               onClick={onOpenImport}
-              className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+              className="p-2 rounded-lg border border-slate-200/70 dark:border-white/10 text-slate-500 hover:text-accent hover:border-accent/60 transition-colors"
               title="导入书签"
             >
               <Upload size={14} />
-              <span>导入</span>
             </button>
-
             <button
               onClick={onOpenBackup}
-              className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+              className="p-2 rounded-lg border border-slate-200/70 dark:border-white/10 text-slate-500 hover:text-accent hover:border-accent/60 transition-colors"
               title="备份与恢复"
             >
               <CloudCog size={14} />
-              <span>备份</span>
             </button>
-
             <button
               onClick={onOpenSettings}
-              className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+              className="p-2 rounded-lg border border-slate-200/70 dark:border-white/10 text-slate-500 hover:text-accent hover:border-accent/60 transition-colors"
               title="AI 设置"
             >
               <Settings size={14} />
-              <span>设置</span>
             </button>
           </div>
 
-          <div className="flex items-center justify-between text-xs px-2 mt-2">
-            <span className="text-slate-400">本地保存 + WebDAV 备份</span>
+          <div className="flex items-center justify-between text-[11px] px-1 mt-2 text-slate-400">
+            <span>本地保存 + WebDAV 备份</span>
             <a
               href={repoUrl}
               target="_blank"

@@ -1091,6 +1091,10 @@ function App() {
     });
   }, [links, selectedCategory, searchQuery]);
 
+  const canSortPinned = selectedCategory === 'all' && !searchQuery && pinnedLinks.length > 1;
+  const canSortCategory = selectedCategory !== 'all' && displayedLinks.length > 1;
+  const isSortingCategory = selectedCategory !== 'all' && isSortingMode === selectedCategory;
+
 
   // --- Render Components ---
 
@@ -1119,14 +1123,14 @@ function App() {
       <div
         ref={setNodeRef}
         style={style}
-        className={`group relative transition-all duration-200 cursor-grab active:cursor-grabbing min-w-0 max-w-full overflow-hidden hover:shadow-lg hover:shadow-green-100/50 dark:hover:shadow-green-900/20 ${
+        className={`group relative transition-all duration-200 cursor-grab active:cursor-grabbing min-w-0 max-w-full overflow-hidden backdrop-blur-lg ${
           isSortingMode || isSortingPinned
-            ? 'bg-green-20 dark:bg-green-900/30 border-green-200 dark:border-green-800' 
-            : 'bg-white/80 dark:bg-slate-900/70 border-slate-200/70 dark:border-white/10'
-        } ${isDragging ? 'shadow-2xl scale-105' : ''} ${
+            ? 'bg-emerald-500/10 border-emerald-400/50'
+            : 'bg-white/60 dark:bg-slate-900/40 border-slate-200/70 dark:border-white/10'
+        } ${isDragging ? 'shadow-2xl scale-[1.02]' : 'hover:-translate-y-1 hover:shadow-xl hover:shadow-accent/20'} ${
           isDetailedView 
-            ? 'flex flex-col rounded-2xl border shadow-sm p-4 min-h-[100px] hover:border-green-400 dark:hover:border-green-500' 
-            : 'flex items-center rounded-xl border shadow-sm hover:border-green-300 dark:hover:border-green-600'
+            ? 'flex flex-col rounded-2xl border shadow-sm p-4 min-h-[100px] hover:border-accent/60' 
+            : 'flex items-center rounded-xl border shadow-sm hover:border-accent/50'
         }`}
         {...attributes}
         {...listeners}
@@ -1174,14 +1178,14 @@ function App() {
     return (
       <div
         key={link.id}
-        className={`group relative transition-all duration-200 hover:shadow-lg hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20 ${
+        className={`group relative transition-all duration-200 backdrop-blur-lg ${isBatchEditMode ? '' : 'hover:-translate-y-1 hover:shadow-xl hover:shadow-accent/20'} ${
           isSelected 
-            ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' 
-            : 'bg-white/80 dark:bg-slate-900/70 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 border-slate-200/70 dark:border-white/10'
+            ? 'bg-rose-500/10 border-rose-400/50' 
+            : 'bg-white/60 dark:bg-slate-900/40 hover:bg-slate-50/70 dark:hover:bg-white/5 border-slate-200/70 dark:border-white/10'
         } ${isBatchEditMode ? 'cursor-pointer' : ''} ${
           isDetailedView 
-            ? 'flex flex-col rounded-2xl border shadow-sm p-4 min-h-[100px] hover:border-blue-400 dark:hover:border-blue-500' 
-            : 'flex items-center justify-between rounded-xl border shadow-sm p-3 hover:border-blue-300 dark:hover:border-blue-600'
+            ? 'flex flex-col rounded-2xl border shadow-sm p-4 min-h-[100px] hover:border-accent/60' 
+            : 'flex items-center justify-between rounded-xl border shadow-sm p-3 hover:border-accent/50'
         }`}
         onClick={() => isBatchEditMode && toggleLinkSelection(link.id)}
         onContextMenu={(e) => handleContextMenu(e, link)}
@@ -1392,6 +1396,10 @@ function App() {
             hoveredSearchSource={hoveredSearchSource}
             selectedSearchSource={selectedSearchSource}
             showSearchSourcePopup={showSearchSourcePopup}
+            canSortPinned={canSortPinned}
+            canSortCategory={canSortCategory}
+            isSortingPinned={isSortingPinned}
+            isSortingCategory={isSortingCategory}
             onOpenSidebar={() => setSidebarOpen(true)}
             onToggleTheme={toggleTheme}
             onViewModeChange={handleViewModeChange}
@@ -1410,9 +1418,14 @@ function App() {
               }
             }}
             onToggleSearchSourcePopup={() => setShowSearchSourcePopup((prev) => !prev)}
-            linksCount={links.length}
-            categoriesCount={categories.length}
-            pinnedCount={pinnedLinks.length}
+            onStartPinnedSorting={() => setIsSortingPinned(true)}
+            onStartCategorySorting={() => startSorting(selectedCategory)}
+            onSavePinnedSorting={savePinnedSorting}
+            onCancelPinnedSorting={cancelPinnedSorting}
+            onSaveCategorySorting={saveSorting}
+            onCancelCategorySorting={cancelSorting}
+            onAddLink={() => { setEditingLink(undefined); setPrefillLink(undefined); setIsModalOpen(true); }}
+            onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
 
           <LinkSections
@@ -1430,12 +1443,6 @@ function App() {
             sensors={sensors}
             onPinnedDragEnd={handlePinnedDragEnd}
             onDragEnd={handleDragEnd}
-            onSavePinnedSorting={savePinnedSorting}
-            onCancelPinnedSorting={cancelPinnedSorting}
-            onStartPinnedSorting={() => setIsSortingPinned(true)}
-            onSaveSorting={saveSorting}
-            onCancelSorting={cancelSorting}
-            onStartSorting={startSorting}
             onToggleBatchEditMode={toggleBatchEditMode}
             onBatchDelete={handleBatchDelete}
             onSelectAll={handleSelectAll}
