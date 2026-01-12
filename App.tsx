@@ -907,11 +907,13 @@ function App() {
           <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100 dark:hidden"></div>
 
           {/* Dark Mode Aurora Background */}
-          <div className="absolute inset-0 hidden dark:block bg-[#0f172a]" style={{
+          <div className="absolute inset-0 hidden dark:block bg-[#0b1121]" style={{
             backgroundImage: `
-              radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%), 
-              radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%)
+              radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+              radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px)
             `,
+            backgroundSize: '30px 30px, 50px 50px',
+            backgroundPosition: '0 0, 15px 15px',
             backgroundAttachment: 'fixed'
           }}></div>
         </div>

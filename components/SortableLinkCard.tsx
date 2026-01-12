@@ -39,8 +39,8 @@ const SortableLinkCard: React.FC<SortableLinkCardProps> = ({
             ref={setNodeRef}
             style={style}
             className={`group relative transition-all duration-300 cursor-grab active:cursor-grabbing min-w-0 max-w-full overflow-hidden backdrop-blur-md ${isSortingMode || isSortingPinned
-                    ? 'bg-emerald-500/10 border-emerald-400/50'
-                    : 'bg-slate-800/40 border border-white/5'
+                ? 'bg-emerald-500/10 border-emerald-400/50'
+                : 'bg-slate-900/30 border border-white/5'
                 } ${isDragging ? 'shadow-2xl scale-[1.02]' : 'hover:-translate-y-1 hover:bg-slate-800/60 hover:border-emerald-500/30 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]'} ${isDetailedView
                     ? 'flex flex-col rounded-2xl p-4 min-h-[100px]'
                     : 'flex items-center rounded-xl p-3'
