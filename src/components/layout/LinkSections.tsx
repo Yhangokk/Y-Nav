@@ -338,7 +338,7 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
         <footer className="mt-auto pt-6 pb-3 text-center animate-in fade-in duration-700 delay-300">
           <div className="inline-flex items-center justify-center gap-3 px-4 py-2 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 backdrop-blur-sm shadow-sm transition-all hover:shadow-md hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800">
             <span className="flex items-center gap-1.5 bg-gradient-to-r from-accent to-purple-500 bg-clip-text text-transparent text-xs font-bold font-mono">
-              Y-Nav <span className="text-slate-300 dark:text-slate-600 font-light">|</span> v{__APP_VERSION__}
+              元启 <span className="text-slate-300 dark:text-slate-600 font-light">|</span> v{__APP_VERSION__}
             </span>
             <span className="w-px h-3 bg-slate-200 dark:bg-slate-700"></span>
             <a
