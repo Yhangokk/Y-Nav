@@ -15,11 +15,10 @@ interface SettingsModalProps {
   links: LinkItem[];
   onUpdateLinks: (links: LinkItem[]) => void;
   onOpenImport: () => void;
-  onOpenBackup: () => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
-  isOpen, onClose, config, siteSettings, onSave, links, onUpdateLinks, onOpenImport, onOpenBackup
+  isOpen, onClose, config, siteSettings, onSave, links, onUpdateLinks, onOpenImport
 }) => {
   const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>('site');
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
@@ -150,7 +149,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {activeTab === 'data' && (
             <DataTab
               onOpenImport={onOpenImport}
-              onOpenBackup={onOpenBackup}
               onClose={onClose}
             />
           )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { WebDavConfig, AIConfig, SiteSettings } from '../types';
-import { WEBDAV_CONFIG_KEY, AI_CONFIG_KEY, SITE_SETTINGS_KEY } from '../utils/constants';
+import { AIConfig, SiteSettings } from '../types';
+import { AI_CONFIG_KEY, SITE_SETTINGS_KEY } from '../utils/constants';
 
 const DEFAULT_AI_CONFIG: AIConfig = {
     provider: 'gemini',
@@ -16,17 +16,7 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
     cardStyle: 'detailed'
 };
 
-const DEFAULT_WEBDAV_CONFIG: WebDavConfig = {
-    url: '',
-    username: '',
-    password: '',
-    enabled: false
-};
-
 export function useConfig() {
-    // WebDAV Config
-    const [webDavConfig, setWebDavConfig] = useState<WebDavConfig>(DEFAULT_WEBDAV_CONFIG);
-
     // AI Config
     const [aiConfig, setAiConfig] = useState<AIConfig>(() => {
         const saved = localStorage.getItem(AI_CONFIG_KEY);
@@ -48,12 +38,6 @@ export function useConfig() {
         }
         return DEFAULT_SITE_SETTINGS;
     });
-
-    // Save WebDAV config
-    const saveWebDavConfig = useCallback((config: WebDavConfig) => {
-        setWebDavConfig(config);
-        localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(config));
-    }, []);
 
     // Save AI config
     const saveAIConfig = useCallback((config: AIConfig, newSiteSettings?: SiteSettings) => {
@@ -86,16 +70,6 @@ export function useConfig() {
         updateSiteSettings({ cardStyle });
     }, [updateSiteSettings]);
 
-    // Load WebDAV config on mount
-    useEffect(() => {
-        const savedWebDav = localStorage.getItem(WEBDAV_CONFIG_KEY);
-        if (savedWebDav) {
-            try {
-                setWebDavConfig(JSON.parse(savedWebDav));
-            } catch (e) { }
-        }
-    }, []);
-
     // Update page title and favicon when site settings change
     useEffect(() => {
         if (siteSettings.title) {
@@ -118,10 +92,6 @@ export function useConfig() {
     const navTitleShort = navTitleText.slice(0, 2);
 
     return {
-        // WebDAV
-        webDavConfig,
-        saveWebDavConfig,
-
         // AI Config
         aiConfig,
         saveAIConfig,
@@ -137,3 +107,4 @@ export function useConfig() {
         navTitleShort
     };
 }
+

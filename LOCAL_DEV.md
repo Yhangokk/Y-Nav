@@ -104,7 +104,6 @@ npm run dev
 | `cloudnav_data_cache_v2` | 链接和分类数据（版本2） |
 | `cloudnav_ai_config` | AI 配置（API Key、模型等） |
 | `cloudnav_search_config` | 搜索引擎配置 |
-| `cloudnav_webdav_config` | WebDAV 备份配置 |
 | `cloudnav_site_settings` | 网站配置（标题、主题色等） |
 | `cloudnav_favicon_cache` | 图标缓存（Base64 格式） |
 | `cloudnav_device_id` | 设备唯一标识（用于同步冲突检测） |

@@ -4,7 +4,6 @@ import { LinkItem, Category, SyncConflict, CloudNavSyncData } from './types';
 // Lazy load modal components for better code splitting
 const LinkModal = lazy(() => import('./components/modals/LinkModal'));
 const CategoryManagerModal = lazy(() => import('./components/modals/CategoryManagerModal'));
-const BackupModal = lazy(() => import('./components/modals/BackupModal'));
 const ImportModal = lazy(() => import('./components/modals/ImportModal'));
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const SearchConfigModal = lazy(() => import('./components/modals/SearchConfigModal'));
@@ -72,10 +71,8 @@ function App() {
     selectAll
   } = useSidebar();
 
-  // === Config (WebDAV, AI, Site Settings) ===
+  // === Config (AI, Site Settings) ===
   const {
-    webDavConfig,
-    saveWebDavConfig,
     aiConfig,
     saveAIConfig,
     restoreAIConfig,
@@ -155,8 +152,6 @@ function App() {
     closeLinkModal,
     isCatManagerOpen,
     setIsCatManagerOpen,
-    isBackupModalOpen,
-    setIsBackupModalOpen,
     isImportModalOpen,
     setIsImportModalOpen,
     isSettingsModalOpen,
@@ -329,11 +324,6 @@ function App() {
     deleteCategoryStore(catId);
   };
 
-  const handleRestoreBackup = (restoredLinks: LinkItem[], restoredCategories: Category[]) => {
-    updateData(restoredLinks, restoredCategories);
-    setIsBackupModalOpen(false);
-  };
-
   // === Bookmarklet URL Handler ===
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -464,20 +454,6 @@ function App() {
           onDeleteCategory={handleDeleteCategory}
         />
 
-        <BackupModal
-          isOpen={isBackupModalOpen}
-          onClose={() => setIsBackupModalOpen(false)}
-          links={links}
-          categories={categories}
-          onRestore={handleRestoreBackup}
-          webDavConfig={webDavConfig}
-          onSaveWebDavConfig={saveWebDavConfig}
-          searchConfig={{ mode: searchMode, externalSources: externalSearchSources }}
-          onRestoreSearchConfig={restoreSearchConfig}
-          aiConfig={aiConfig}
-          onRestoreAIConfig={restoreAIConfig}
-        />
-
         <ImportModal
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}
@@ -497,7 +473,6 @@ function App() {
           links={links}
           onUpdateLinks={(newLinks) => updateData(newLinks, categories)}
           onOpenImport={() => setIsImportModalOpen(true)}
-          onOpenBackup={() => setIsBackupModalOpen(true)}
         />
 
         <SearchConfigModal
@@ -550,7 +525,6 @@ function App() {
         onToggleCollapsed={toggleSidebarCollapsed}
         onOpenCategoryManager={() => setIsCatManagerOpen(true)}
         onOpenImport={() => setIsImportModalOpen(true)}
-        onOpenBackup={() => setIsBackupModalOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
 

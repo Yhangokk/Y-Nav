@@ -5,7 +5,6 @@ export function useModals() {
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCatManagerOpen, setIsCatManagerOpen] = useState(false);
-    const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isSearchConfigModalOpen, setIsSearchConfigModalOpen] = useState(false);
@@ -51,12 +50,6 @@ export function useModals() {
         setIsCatManagerOpen,
         openCatManager: () => setIsCatManagerOpen(true),
         closeCatManager: () => setIsCatManagerOpen(false),
-
-        // Backup Modal
-        isBackupModalOpen,
-        setIsBackupModalOpen,
-        openBackupModal: () => setIsBackupModalOpen(true),
-        closeBackupModal: () => setIsBackupModalOpen(false),
 
         // Import Modal
         isImportModalOpen,
