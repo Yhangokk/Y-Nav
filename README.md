@@ -10,7 +10,7 @@
 **极简、隐私、智能。**  
 **基于 Local-First 架构，配合 Cloudflare KV 实现无感多端同步。**
 
-[在线演示](https://y-nav.yml.workers.dev) · [快速部署](#-快速部署)
+[在线演示](https://nav.yml.qzz.io) · [快速部署](#-快速部署)
 
 </div>
 
@@ -18,14 +18,14 @@
 
 ## ✨ 核心特性
 
-| 特性 | 说明 |
-|------|------|
-| 🚀 **极简设计** | React 19 + Tailwind CSS v4，极速启动，丝滑交互 |
-| ☁️ **云端同步** | Cloudflare KV 实现多设备实时同步 |
-| 🧠 **AI 整理** | Google Gemini 一键生成网站简介，智能推荐分类 |
+| 特性            | 说明                                             |
+| --------------- | ------------------------------------------------ |
+| 🚀 **极简设计** | React 19 + Tailwind CSS v4，极速启动，丝滑交互   |
+| ☁️ **云端同步** | Cloudflare KV 实现多设备实时同步                 |
+| 🧠 **AI 整理**  | Google Gemini 一键生成网站简介，智能推荐分类     |
 | 🔒 **安全隐私** | Local-First 架构，数据优先本地存储，支持同步密码 |
-| 🎨 **个性化** | 深色模式、自定义主题色、背景风格、卡片布局 |
-| 📱 **响应式** | 完美适配桌面端和移动端 |
+| 🎨 **个性化**   | 深色模式、自定义主题色、背景风格、卡片布局       |
+| 📱 **响应式**   | 完美适配桌面端和移动端                           |
 
 ---
 
@@ -35,16 +35,85 @@
 
 ### 部署方式对比
 
-| 对比项 | Cloudflare Workers | Cloudflare Pages |
-|--------|-------------------|------------------|
-| **国内访问** | ⭐⭐⭐ 支持优选 IP | ⭐⭐ 一般 |
-| **配置难度** | 中等 | 简单 |
-| **自动部署** | GitHub Actions | Cloudflare 原生 Git 集成 |
-| **适合人群** | 追求速度的国内用户 | 快速体验 / 海外用户 |
+| 对比项       | Cloudflare Workers | Cloudflare Pages         |
+| ------------ | ------------------ | ------------------------ |
+| **国内访问** | ⭐⭐⭐ 支持优选 IP | ⭐⭐ 一般                |
+| **配置难度** | 中等               | 简单                     |
+| **自动部署** | GitHub Actions     | Cloudflare 原生 Git 集成 |
+| **适合人群** | 追求速度的国内用户 | 快速体验 / 海外用户      |
 
 ---
 
-## 方式一：Cloudflare Workers（推荐）
+<details>
+<summary>方式一：Cloudflare Pages（小白推荐）</summary>
+
+### 1. 一键部署到 Cloudflare Pages
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/yml2213/Y-Nav)
+
+- 点击按钮后按提示授权 GitHub 与 Cloudflare
+- 选择你的 GitHub 账号，Cloudflare 会自动创建 Pages 项目
+- 如果构建参数没自动填，使用：
+  - Build command: `npm run build`
+  - Build output directory: `dist`
+
+### 2. 绑定 KV（必须）
+
+1. Cloudflare Dashboard → **Workers & Pages** → **KV** → **Create a namespace**
+2. 命名：`YNAV_DB`（任意名称均可）
+3. 打开 Pages 项目 → **Settings** → **Functions** → **KV namespace bindings**
+4. 新增绑定：
+   - Variable name: `YNAV_KV`（必须一致）
+   - KV namespace: 选择刚创建的 KV
+5. 保存后 **重新部署**
+
+### 3. 设置同步密码（可选）
+
+Pages 项目 → **Settings** → **Environment variables** 添加：
+
+- `SYNC_PASSWORD`: 你的同步密码
+
+### 4. 自动更新说明
+
+- Pages 会在你的仓库 **有新提交时自动构建并更新**（无需手动操作）
+- 如果你是 Fork 用户，想自动跟随本仓库更新，可添加一个定时同步 Action：
+
+```yaml
+# .github/workflows/sync-upstream.yml
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 每天 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Sync from upstream
+        run: |
+          git remote add upstream https://github.com/yml2213/Y-Nav.git
+          git fetch upstream
+          git checkout main
+          git merge upstream/main --no-edit
+          git push origin main
+```
+
+> 如果出现冲突，需要手动处理后再推送。
+
+</details>
+
+---
+
+<details>
+<summary>方式二：Cloudflare Workers</summary>
 
 > 支持自定义域名 + 优选 IP，国内访问更快更稳定。
 
@@ -76,11 +145,11 @@
 
 添加以下 Secrets：
 
-| Secret 名称 | 值 |
-|------------|-----|
-| `CLOUDFLARE_API_TOKEN` | 步骤 2 创建的 Token |
-| `CLOUDFLARE_ACCOUNT_ID` | 步骤 3 获取的 Account ID |
-| `SYNC_PASSWORD` | （可选）同步密码，用于保护数据 |
+| Secret 名称             | 值                             |
+| ----------------------- | ------------------------------ |
+| `CLOUDFLARE_API_TOKEN`  | 步骤 2 创建的 Token            |
+| `CLOUDFLARE_ACCOUNT_ID` | 步骤 3 获取的 Account ID       |
+| `SYNC_PASSWORD`         | （可选）同步密码，用于保护数据 |
 
 ### 步骤 5：创建 KV 命名空间
 
@@ -111,54 +180,7 @@ id = "你的 Namespace ID"  # ← 替换这里
 2. 在 **Custom Domains** 中添加你的域名，如 `nav.example.com`
 3. 在你的域名 DNS 设置中，将该子域名 CNAME 到优选 IP
 
----
-
-## 方式二：Cloudflare Pages
-
-> 配置最简单，Git 推送自动部署。
-
-### 步骤 1：Fork 仓库
-
-点击本仓库右上角的 **Fork** 按钮。
-
-### 步骤 2：创建 Pages 项目
-
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. 进入 **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-3. 授权并选择你 Fork 的 `Y-Nav` 仓库
-4. 配置构建设置：
-
-| 配置项 | 值 |
-|--------|-----|
-| Framework preset | None |
-| Build command | `npm run build` |
-| Build output directory | `dist` |
-
-5. 点击 **Save and Deploy**
-
-### 步骤 3：创建 KV 命名空间
-
-1. 进入 **Workers & Pages** → **KV** → **Create a namespace**
-2. 名称填入：`YNAV_DB`（或任意名称）
-3. 创建成功后记住这个名称
-
-### 步骤 4：绑定 KV 到 Pages
-
-1. 进入你的 Pages 项目 → **Settings** → **Functions** → **KV namespace bindings**
-2. 点击 **Add binding**：
-   - Variable name：`YNAV_KV`（必须完全一致）
-   - KV namespace：选择刚创建的 `YNAV_DB`
-3. 保存后**重新部署**项目
-
-### 步骤 5：设置同步密码（可选）
-
-1. Pages 项目 → **Settings** → **Environment variables**
-2. 添加变量：
-   - Variable name：`SYNC_PASSWORD`
-   - Value：你的密码
-3. 保存后**重新部署**
-
-部署成功后，访问：`https://y-nav.pages.dev`（或你自定义的域名）
+</details>
 
 ---
 
@@ -166,16 +188,16 @@ id = "你的 Namespace ID"  # ← 替换这里
 
 同步密码用于保护你的导航数据，防止他人通过 API 修改。
 
-| 部署方式 | 设置位置 |
-|---------|---------|
-| Workers | GitHub Secrets 的 `SYNC_PASSWORD` 或 Worker Settings → Variables |
-| Pages | Pages Settings → Environment variables |
+| 部署方式 | 设置位置                                                         |
+| -------- | ---------------------------------------------------------------- |
+| Workers  | GitHub Secrets 的 `SYNC_PASSWORD` 或 Worker Settings → Variables |
+| Pages    | Pages Settings → Environment variables                           |
 
 设置后，在网站的 **设置** → **数据** 中输入相同密码即可开启同步。
 
 ---
 
-## � 同步上游更新
+## 🔄 同步上游更新
 
 当原仓库有新版本时：
 
@@ -236,13 +258,13 @@ Y-Nav/
 
 ## 🛠️ 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 19, TypeScript, Vite |
-| 样式 | Tailwind CSS v4, Lucide Icons |
-| 状态/同步 | LocalStorage + 自定义同步引擎 |
-| 后端 | Cloudflare Workers / Pages Functions + KV |
-| AI | Google Generative AI SDK |
+| 层级      | 技术                                      |
+| --------- | ----------------------------------------- |
+| 前端      | React 19, TypeScript, Vite                |
+| 样式      | Tailwind CSS v4, Lucide Icons             |
+| 状态/同步 | LocalStorage + 自定义同步引擎             |
+| 后端      | Cloudflare Workers / Pages Functions + KV |
+| AI        | Google Generative AI SDK                  |
 
 ---
 
