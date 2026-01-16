@@ -34,6 +34,8 @@ interface SyncMetadata {
     updatedAt: number;
     deviceId: string;
     version: number;
+    browser?: string;
+    os?: string;
 }
 
 interface YNavSyncData {
@@ -245,7 +247,9 @@ async function handleListBackups(env: Env): Promise<Response> {
             expiration: key.expiration,
             deviceId: meta?.deviceId,
             updatedAt: meta?.updatedAt,
-            version: meta?.version
+            version: meta?.version,
+            browser: meta?.browser,
+            os: meta?.os
         };
     }));
 

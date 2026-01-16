@@ -39,7 +39,7 @@ export function useTheme() {
         const storedTheme = localStorage.getItem(THEME_KEY);
         const initialMode: ThemeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'system'
             ? storedTheme
-            : 'dark';
+            : 'system';
         setThemeMode(initialMode);
         applyThemeMode(initialMode);
     }, [applyThemeMode]);

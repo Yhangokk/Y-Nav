@@ -13,6 +13,7 @@
 interface KVNamespaceInterface {
     get(key: string, type?: 'text' | 'json' | 'arrayBuffer' | 'stream'): Promise<any>;
     put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+    delete(key: string): Promise<void>;
     list(options?: { prefix?: string }): Promise<{ keys: Array<{ name: string; expiration?: number }> }>;
 }
 
@@ -339,7 +340,9 @@ async function handleListBackups(request: Request, env: Env): Promise<Response> 
                 expiration: key.expiration,
                 deviceId: meta?.deviceId,
                 updatedAt: meta?.updatedAt,
-                version: meta?.version
+                version: meta?.version,
+                browser: meta?.browser,
+                os: meta?.os
             };
         }));
 
@@ -353,6 +356,62 @@ async function handleListBackups(request: Request, env: Env): Promise<Response> 
         return new Response(JSON.stringify({
             success: false,
             error: error.message || '获取备份列表失败'
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+// DELETE /api/sync (with action=backup) - 删除指定备份
+async function handleDeleteBackup(request: Request, env: Env): Promise<Response> {
+    // 鉴权检查
+    if (!isAuthenticated(request, env)) {
+        return new Response(JSON.stringify({
+            success: false,
+            error: 'Unauthorized'
+        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    try {
+        const body = await request.json() as { backupKey?: string };
+        const backupKey = body.backupKey;
+
+        if (!backupKey || !backupKey.startsWith(KV_BACKUP_PREFIX)) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: '无效的备份 key'
+            }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // 检查备份是否存在
+        const backupData = await env.YNAV_KV.get(backupKey, 'json');
+        if (!backupData) {
+            return new Response(JSON.stringify({
+                success: false,
+                error: '备份不存在或已过期'
+            }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // 删除备份
+        await env.YNAV_KV.delete(backupKey);
+
+        return new Response(JSON.stringify({
+            success: true,
+            message: '备份已删除'
+        }), {
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error: any) {
+        return new Response(JSON.stringify({
+            success: false,
+            error: error.message || '删除失败'
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
@@ -382,6 +441,12 @@ export const onRequest = async (context: { request: Request; env: Env }) => {
             return handleRestoreBackup(request, env);
         }
         return handlePost(request, env);
+    }
+
+    if (request.method === 'DELETE') {
+        if (action === 'backup') {
+            return handleDeleteBackup(request, env);
+        }
     }
 
     return new Response(JSON.stringify({

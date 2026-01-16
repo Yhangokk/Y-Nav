@@ -25,7 +25,8 @@ import {
     SYNC_API_ENDPOINT,
     SYNC_META_KEY,
     SYNC_PASSWORD_KEY,
-    getDeviceId
+    getDeviceId,
+    getDeviceInfo
 } from '../utils/constants';
 
 // 同步引擎配置
@@ -47,6 +48,7 @@ interface UseSyncEngineReturn {
     schedulePush: (data: Omit<YNavSyncData, 'meta'>) => void;
     createBackup: (data: Omit<YNavSyncData, 'meta'>) => Promise<boolean>;
     restoreBackup: (backupKey: string) => Promise<YNavSyncData | null>;
+    deleteBackup: (backupKey: string) => Promise<boolean>;
 
     // 冲突解决
     resolveConflict: (choice: 'local' | 'remote') => void;
@@ -136,6 +138,7 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
 
         const localMeta = getLocalSyncMeta();
         const deviceId = getDeviceId();
+        const deviceInfo = getDeviceInfo();
 
         // 构建完整的同步数据
         const syncData: YNavSyncData = {
@@ -143,7 +146,9 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
             meta: {
                 updatedAt: Date.now(),
                 deviceId,
-                version: localMeta?.version || 0
+                version: localMeta?.version || 0,
+                browser: deviceInfo?.browser,
+                os: deviceInfo?.os
             }
         };
 
@@ -230,12 +235,15 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
         setSyncStatus('syncing');
 
         const deviceId = getDeviceId();
+        const deviceInfo = getDeviceInfo();
         const syncData: YNavSyncData = {
             ...data,
             meta: {
                 updatedAt: Date.now(),
                 deviceId,
-                version: getLocalSyncMeta()?.version || 0
+                version: getLocalSyncMeta()?.version || 0,
+                browser: deviceInfo?.browser,
+                os: deviceInfo?.os
             }
         };
 
@@ -293,6 +301,28 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
         }
     }, [onError]);
 
+    // 删除备份
+    const deleteBackup = useCallback(async (backupKey: string): Promise<boolean> => {
+        try {
+            const response = await fetch(`${SYNC_API_ENDPOINT}?action=backup`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ backupKey })
+            });
+            const result = await response.json();
+
+            if (!result.success) {
+                onError?.(result.error || '删除失败');
+                return false;
+            }
+
+            return true;
+        } catch (error: any) {
+            onError?.(error.message || '网络错误');
+            return false;
+        }
+    }, [onError]);
+
     // 解决冲突
     const resolveConflict = useCallback((choice: 'local' | 'remote') => {
         if (!currentConflict) return;
@@ -328,6 +358,7 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
         schedulePush,
         createBackup,
         restoreBackup,
+        deleteBackup,
         resolveConflict,
         currentConflict,
         cancelPendingSync

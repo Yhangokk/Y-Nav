@@ -17,6 +17,7 @@ interface SettingsModalProps {
   onOpenImport: () => void;
   onCreateBackup: () => Promise<boolean>;
   onRestoreBackup: (backupKey: string) => Promise<boolean>;
+  onDeleteBackup: (backupKey: string) => Promise<boolean>;
   useSeparatePrivacyPassword: boolean;
   onMigratePrivacyMode: (payload: { useSeparatePassword: boolean; oldPassword: string; newPassword: string }) => Promise<boolean>;
   privacyGroupEnabled: boolean;
@@ -37,6 +38,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenImport,
   onCreateBackup,
   onRestoreBackup,
+  onDeleteBackup,
   useSeparatePrivacyPassword,
   onMigratePrivacyMode,
   privacyGroupEnabled,
@@ -185,6 +187,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               onClose={onClose}
               onCreateBackup={onCreateBackup}
               onRestoreBackup={onRestoreBackup}
+              onDeleteBackup={onDeleteBackup}
               useSeparatePrivacyPassword={useSeparatePrivacyPassword}
               onMigratePrivacyMode={onMigratePrivacyMode}
               privacyGroupEnabled={privacyGroupEnabled}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Database, Upload, Cloud, Lock, Eye, EyeOff, RefreshCw, Clock, Cpu, CloudUpload, CloudDownload } from 'lucide-react';
+import { Database, Upload, Cloud, Lock, Eye, EyeOff, RefreshCw, Clock, Cpu, CloudUpload, CloudDownload, Trash2 } from 'lucide-react';
 import { SYNC_API_ENDPOINT, SYNC_PASSWORD_KEY } from '../../../utils/constants';
 
 interface DataTabProps {
@@ -7,6 +7,7 @@ interface DataTabProps {
     onClose: () => void;
     onCreateBackup: () => Promise<boolean>;
     onRestoreBackup: (backupKey: string) => Promise<boolean>;
+    onDeleteBackup: (backupKey: string) => Promise<boolean>;
     useSeparatePrivacyPassword: boolean;
     onMigratePrivacyMode: (payload: { useSeparatePassword: boolean; oldPassword: string; newPassword: string }) => Promise<boolean>;
     privacyGroupEnabled: boolean;
@@ -22,6 +23,8 @@ interface BackupItem {
     deviceId?: string;
     updatedAt?: number;
     version?: number;
+    browser?: string;
+    os?: string;
 }
 
 const DataTab: React.FC<DataTabProps> = ({
@@ -29,6 +32,7 @@ const DataTab: React.FC<DataTabProps> = ({
     onClose,
     onCreateBackup,
     onRestoreBackup,
+    onDeleteBackup,
     useSeparatePrivacyPassword,
     onMigratePrivacyMode,
     privacyGroupEnabled,
@@ -44,6 +48,7 @@ const DataTab: React.FC<DataTabProps> = ({
     const [isCreatingBackup, setIsCreatingBackup] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
     const [restoringKey, setRestoringKey] = useState<string | null>(null);
+    const [deletingKey, setDeletingKey] = useState<string | null>(null);
     const [privacyTarget, setPrivacyTarget] = useState<'sync' | 'separate' | null>(null);
     const [privacyOldPassword, setPrivacyOldPassword] = useState('');
     const [privacyNewPassword, setPrivacyNewPassword] = useState('');
@@ -85,7 +90,13 @@ const DataTab: React.FC<DataTabProps> = ({
         return '未知时间';
     };
 
-    const formatDeviceLabel = (deviceId?: string) => {
+    const formatDeviceLabel = (deviceId?: string, browser?: string, os?: string) => {
+        // 如果有浏览器和操作系统信息,优先显示
+        if (browser && os) {
+            return `${browser} • ${os}`;
+        }
+
+        // 否则使用原有的设备ID格式化逻辑
         if (!deviceId) return '未知设备';
         const parts = deviceId.split('_');
         if (parts.length >= 3 && parts[0] === 'device') {
@@ -149,6 +160,18 @@ const DataTab: React.FC<DataTabProps> = ({
             setRestoringKey(null);
         }
     }, [fetchBackups, onRestoreBackup]);
+
+    const handleDeleteBackup = useCallback(async (backupKey: string) => {
+        setDeletingKey(backupKey);
+        try {
+            const success = await onDeleteBackup(backupKey);
+            if (success) {
+                await fetchBackups();
+            }
+        } finally {
+            setDeletingKey(null);
+        }
+    }, [fetchBackups, onDeleteBackup]);
 
     const isSyncPasswordReady = password.trim().length > 0;
     const currentPrivacyMode = useSeparatePrivacyPassword ? '独立密码' : '同步密码';
@@ -433,8 +456,8 @@ const DataTab: React.FC<DataTabProps> = ({
                     {!isLoadingBackups && !backupError && backups.length > 0 && (
                         <div className="space-y-2">
                             {backups.map((backup) => {
-                                const deviceLabel = formatDeviceLabel(backup.deviceId);
-                                const showDeviceId = backup.deviceId && deviceLabel !== backup.deviceId;
+                                const deviceLabel = formatDeviceLabel(backup.deviceId, backup.browser, backup.os);
+                                const showDeviceId = backup.deviceId && !backup.browser && !backup.os && deviceLabel !== backup.deviceId;
                                 return (
                                 <div
                                     key={backup.key}
@@ -445,15 +468,26 @@ const DataTab: React.FC<DataTabProps> = ({
                                             <Clock size={12} />
                                             <span>{formatBackupTime(backup)}</span>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRestoreBackup(backup.key)}
-                                            disabled={!!restoringKey}
-                                            className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200 disabled:opacity-60"
-                                        >
-                                            <CloudDownload size={12} className={restoringKey === backup.key ? 'animate-spin' : ''} />
-                                            恢复
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRestoreBackup(backup.key)}
+                                                disabled={!!restoringKey || !!deletingKey}
+                                                className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200 disabled:opacity-60"
+                                            >
+                                                <CloudDownload size={12} className={restoringKey === backup.key ? 'animate-spin' : ''} />
+                                                恢复
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteBackup(backup.key)}
+                                                disabled={!!restoringKey || !!deletingKey}
+                                                className="flex items-center gap-1.5 text-xs text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-200 disabled:opacity-60"
+                                            >
+                                                <Trash2 size={12} className={deletingKey === backup.key ? 'animate-spin' : ''} />
+                                                删除
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="mt-1 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                                         <Cpu size={12} />

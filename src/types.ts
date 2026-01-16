@@ -107,7 +107,9 @@ export const INITIAL_LINKS: LinkItem[] = [
 export interface SyncMetadata {
   updatedAt: number;      // 最后更新时间戳 (毫秒)
   deviceId: string;       // 设备唯一标识
-  version: number;        // 数据版本号（递增，防止并发冲突）
+  version: number;        // 数据版本号(递增,防止并发冲突)
+  browser?: string;       // 浏览器信息
+  os?: string;            // 操作系统信息
 }
 
 // Main sync data structure

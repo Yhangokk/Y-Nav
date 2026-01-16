@@ -183,6 +183,7 @@ function App() {
     schedulePush,
     createBackup,
     restoreBackup,
+    deleteBackup,
     resolveConflict: resolveSyncConflict
   } = useSyncEngine({
     onConflict: handleSyncConflict,
@@ -966,6 +967,26 @@ function App() {
     return true;
   }, [confirm, restoreBackup, handleSyncComplete, notify, buildSyncData]);
 
+  const handleDeleteBackup = useCallback(async (backupKey: string) => {
+    const confirmed = await confirm({
+      title: '删除备份',
+      message: '确定要删除此备份吗?此操作无法撤销。',
+      confirmText: '删除',
+      cancelText: '取消',
+      variant: 'danger'
+    });
+    if (!confirmed) return false;
+
+    const success = await deleteBackup(backupKey);
+    if (!success) {
+      notify('删除失败，请稍后重试', 'error');
+      return false;
+    }
+
+    notify('备份已删除', 'success');
+    return true;
+  }, [confirm, deleteBackup, notify]);
+
   // === Render ===
   return (
     <div className={`flex h-screen overflow-hidden ${toneClasses.text}`}>
@@ -1002,6 +1023,7 @@ function App() {
           onOpenImport={() => setIsImportModalOpen(true)}
           onCreateBackup={handleCreateBackup}
           onRestoreBackup={handleRestoreBackup}
+          onDeleteBackup={handleDeleteBackup}
           useSeparatePrivacyPassword={useSeparatePrivacyPassword}
           onMigratePrivacyMode={handleMigratePrivacyMode}
           privacyGroupEnabled={privacyGroupEnabled}
