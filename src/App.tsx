@@ -40,8 +40,10 @@ import {
   PRIVACY_GROUP_ENABLED_KEY,
   PRIVACY_SESSION_UNLOCKED_KEY,
   PRIVACY_USE_SEPARATE_PASSWORD_KEY,
+  SYNC_API_ENDPOINT,
   SYNC_META_KEY,
   SYNC_PASSWORD_KEY,
+  VIEW_PASSWORD_KEY,
   WEBMASTER_UNLOCKED_KEY,
   getDeviceId
 } from './utils/constants';
@@ -88,7 +90,45 @@ function App() {
   const syncPasswordRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncPasswordRefreshIdRef = useRef(0);
   const lastSyncPasswordRef = useRef((localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim());
+  const viewPasswordRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewPasswordRefreshIdRef = useRef(0);
+  const lastViewPasswordRef = useRef((localStorage.getItem(VIEW_PASSWORD_KEY) || '').trim());
   const isSyncPasswordRefreshingRef = useRef(false);
+  const [remoteAuth, setRemoteAuth] = useState<{
+    passwordRequired: boolean;
+    canWrite: boolean;
+    viewPasswordRequired?: boolean;
+    canView?: boolean;
+  } | null>(null);
+
+  const buildRemoteAuthHeaders = useCallback(() => {
+    const syncPassword = (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
+    const viewPassword = (localStorage.getItem(VIEW_PASSWORD_KEY) || '').trim();
+    return {
+      'Content-Type': 'application/json',
+      ...(syncPassword ? { 'X-Sync-Password': syncPassword } : {}),
+      ...(viewPassword ? { 'X-View-Password': viewPassword } : {})
+    };
+  }, []);
+
+  const refreshRemoteAuth = useCallback(async () => {
+    try {
+      const response = await fetch(`${SYNC_API_ENDPOINT}?action=whoami`, { headers: buildRemoteAuthHeaders() });
+      const result = await response.json();
+      if (!result?.success) {
+        setRemoteAuth(null);
+        return;
+      }
+      setRemoteAuth({
+        passwordRequired: !!result.passwordRequired,
+        canWrite: !!result.canWrite,
+        viewPasswordRequired: !!result.viewPasswordRequired,
+        canView: !!result.canView
+      });
+    } catch {
+      setRemoteAuth(null);
+    }
+  }, [buildRemoteAuthHeaders]);
   const getLocalSyncMeta = useCallback(() => {
     const stored = localStorage.getItem(SYNC_META_KEY);
     if (!stored) return null;
@@ -105,6 +145,11 @@ function App() {
     setPrivacyGroupEnabled(localStorage.getItem(PRIVACY_GROUP_ENABLED_KEY) === '1');
     setPrivacyAutoUnlockEnabled(localStorage.getItem(PRIVACY_AUTO_UNLOCK_KEY) === '1');
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    refreshRemoteAuth();
+  }, [isLoaded, refreshRemoteAuth]);
 
   // === Theme ===
   const { themeMode, darkMode, setThemeAndApply } = useTheme();
@@ -447,9 +492,35 @@ function App() {
   }, [notify, privateLinks, privateVaultCipher, useSeparatePrivacyPassword]);
 
   // === Computed: Displayed Links ===
+  const hasRevealCredential = !!(
+    (localStorage.getItem(VIEW_PASSWORD_KEY) || '').trim()
+    || (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim()
+    || webmasterUnlocked
+  );
+  const canRevealHidden = hasRevealCredential && !!(remoteAuth?.canView || remoteAuth?.canWrite || webmasterUnlocked);
+  const hiddenCategoryIds = useMemo(() => {
+    return new Set(categories.filter(c => c.hidden).map(c => c.id));
+  }, [categories]);
+  const visibleCategories = useMemo(() => {
+    return canRevealHidden ? categories : categories.filter(c => !c.hidden);
+  }, [categories, canRevealHidden]);
+  const visibleLinks = useMemo(() => {
+    if (canRevealHidden) return links;
+    return links.filter(l => !l.hidden && !hiddenCategoryIds.has(l.categoryId));
+  }, [links, canRevealHidden, hiddenCategoryIds]);
+
+  useEffect(() => {
+    if (canRevealHidden) return;
+    if (selectedCategory === 'all' || selectedCategory === PRIVATE_CATEGORY_ID) return;
+    const selected = categories.find(c => c.id === selectedCategory);
+    if (selected?.hidden) {
+      setSelectedCategory('all');
+    }
+  }, [canRevealHidden, selectedCategory, categories, setSelectedCategory]);
+
   const pinnedLinks = useMemo(() => {
-    const filteredPinnedLinks = links.filter(l => l.pinned);
-    return filteredPinnedLinks.sort((a, b) => {
+    const filteredPinnedLinks = visibleLinks.filter(l => l.pinned);
+    return filteredPinnedLinks.slice().sort((a, b) => {
       if (a.pinnedOrder !== undefined && b.pinnedOrder !== undefined) {
         return a.pinnedOrder - b.pinnedOrder;
       }
@@ -457,10 +528,10 @@ function App() {
       if (b.pinnedOrder !== undefined) return 1;
       return a.createdAt - b.createdAt;
     });
-  }, [links]);
+  }, [visibleLinks]);
 
   const displayedLinks = useMemo(() => {
-    let result = links;
+    let result = visibleLinks;
 
     // Search Filter
     if (searchQuery.trim()) {
@@ -478,12 +549,12 @@ function App() {
     }
 
     // Sort by order
-    return result.sort((a, b) => {
+    return result.slice().sort((a, b) => {
       const aOrder = a.order !== undefined ? a.order : a.createdAt;
       const bOrder = b.order !== undefined ? b.order : b.createdAt;
       return aOrder - bOrder;
     });
-  }, [links, selectedCategory, searchQuery]);
+  }, [visibleLinks, selectedCategory, searchQuery]);
 
   const displayedPrivateLinks = useMemo(() => {
     let result = privateLinks;
@@ -558,6 +629,7 @@ function App() {
     editLinkFromContextMenu,
     deleteLinkFromContextMenu,
     togglePinFromContextMenu,
+    toggleHiddenFromContextMenu,
     duplicateLinkFromContextMenu,
     moveLinkFromContextMenu
   } = useContextMenu({
@@ -605,10 +677,10 @@ function App() {
   const linkCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     // Initialize all categories with 0
-    categories.forEach(cat => counts[cat.id] = 0);
+    visibleCategories.forEach(cat => counts[cat.id] = 0);
     counts['pinned'] = 0;
 
-    links.forEach(link => {
+    visibleLinks.forEach(link => {
       // Count by category
       if (counts[link.categoryId] !== undefined) {
         counts[link.categoryId]++;
@@ -624,7 +696,7 @@ function App() {
     });
 
     return counts;
-  }, [links, categories]);
+  }, [visibleLinks, visibleCategories]);
 
   const privateCount = privacyGroupEnabled && isPrivateUnlocked ? privateLinks.length : 0;
   const privateUnlockHint = useSeparatePrivacyPassword
@@ -1092,15 +1164,41 @@ function App() {
         .finally(() => {
           if (syncPasswordRefreshIdRef.current === refreshId) {
             isSyncPasswordRefreshingRef.current = false;
+            refreshRemoteAuth();
           }
         });
     }, 600);
-  }, [cancelPendingSync, handleManualPull]);
+  }, [cancelPendingSync, handleManualPull, refreshRemoteAuth]);
+
+  const handleViewPasswordChange = useCallback((nextPassword: string) => {
+    const trimmed = nextPassword.trim();
+    if (trimmed === lastViewPasswordRef.current) return;
+    lastViewPasswordRef.current = trimmed;
+
+    if (viewPasswordRefreshTimerRef.current) {
+      clearTimeout(viewPasswordRefreshTimerRef.current);
+      viewPasswordRefreshTimerRef.current = null;
+    }
+
+    viewPasswordRefreshIdRef.current += 1;
+    const refreshId = viewPasswordRefreshIdRef.current;
+    viewPasswordRefreshTimerRef.current = setTimeout(() => {
+      viewPasswordRefreshTimerRef.current = null;
+      handleManualPull().finally(() => {
+        if (viewPasswordRefreshIdRef.current === refreshId) {
+          refreshRemoteAuth();
+        }
+      });
+    }, 600);
+  }, [handleManualPull, refreshRemoteAuth]);
 
   useEffect(() => {
     return () => {
       if (syncPasswordRefreshTimerRef.current) {
         clearTimeout(syncPasswordRefreshTimerRef.current);
+      }
+      if (viewPasswordRefreshTimerRef.current) {
+        clearTimeout(viewPasswordRefreshTimerRef.current);
       }
     };
   }, []);
@@ -1195,6 +1293,7 @@ function App() {
           onRestoreBackup={handleRestoreBackup}
           onDeleteBackup={handleDeleteBackup}
           onSyncPasswordChange={handleSyncPasswordChange}
+          onViewPasswordChange={handleViewPasswordChange}
           useSeparatePrivacyPassword={useSeparatePrivacyPassword}
           onMigratePrivacyMode={handleMigratePrivacyMode}
           privacyGroupEnabled={privacyGroupEnabled}
@@ -1256,7 +1355,7 @@ function App() {
           navTitleText={navTitleText}
           navTitleShort={navTitleShort}
           selectedCategory={selectedCategory}
-          categories={categories}
+          categories={visibleCategories}
           linkCounts={linkCounts}
           privacyGroupEnabled={privacyGroupEnabled}
           isPrivateUnlocked={isPrivateUnlocked}
@@ -1376,12 +1475,12 @@ function App() {
           />
 
           <LinkSections
-            linksCount={links.length}
+            linksCount={visibleLinks.length}
             pinnedLinks={pinnedLinks}
             displayedLinks={activeDisplayedLinks}
             selectedCategory={selectedCategory}
             searchQuery={searchQuery}
-            categories={categories}
+            categories={visibleCategories}
             siteTitle={siteSettings.title}
             siteCardStyle={siteSettings.cardStyle}
             isSortingPinned={isSortingPinned}
@@ -1417,7 +1516,7 @@ function App() {
           onClose={closeLinkModal}
           onSave={editingLink ? handleEditLink : handleAddLink}
           onDelete={editingLink ? handleDeleteLink : undefined}
-          categories={categories}
+          categories={visibleCategories}
           initialData={editingLink || (prefillLink as LinkItem)}
           aiConfig={aiConfig}
           defaultCategoryId={selectedCategory !== 'all' && selectedCategory !== PRIVATE_CATEGORY_ID ? selectedCategory : undefined}
@@ -1440,8 +1539,9 @@ function App() {
       <ContextMenu
         isOpen={contextMenu.isOpen}
         position={contextMenu.position}
-        categories={categories}
+        categories={visibleCategories}
         readOnly={isReadOnly}
+        linkHidden={!!contextMenu.link?.hidden}
         onClose={closeContextMenu}
         onCopyLink={copyLinkToClipboard}
         onEditLink={editLinkFromContextMenu}
@@ -1449,6 +1549,7 @@ function App() {
         onMoveLink={moveLinkFromContextMenu}
         onDeleteLink={deleteLinkFromContextMenu}
         onTogglePin={togglePinFromContextMenu}
+        onToggleHidden={toggleHiddenFromContextMenu}
       />
     </div>
   );

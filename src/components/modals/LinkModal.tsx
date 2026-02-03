@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Upload } from 'lucide-react';
+import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Upload, EyeOff } from 'lucide-react';
 import { LinkItem, Category, AIConfig } from '../../types';
 import { generateLinkDescription, suggestCategory } from '../../services/geminiService';
 import { useDialog } from '../ui/DialogProvider';
@@ -35,6 +35,7 @@ const LinkModal: React.FC<LinkModalProps> = ({
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || 'common');
   const [pinned, setPinned] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [icon, setIcon] = useState('');
   const [iconTone, setIconTone] = useState('');
   const [iconToneInput, setIconToneInput] = useState('');
@@ -72,6 +73,7 @@ const LinkModal: React.FC<LinkModalProps> = ({
         setDescription(initialData.description || '');
         setCategoryId(initialData.categoryId);
         setPinned(initialData.pinned || false);
+        setHidden(initialData.hidden || false);
         setIcon(initialData.icon || '');
         setIconTone(initialData.iconTone || '');
         setIconToneInput(initialData.iconTone || '');
@@ -83,6 +85,7 @@ const LinkModal: React.FC<LinkModalProps> = ({
         const defaultCategory = defaultCategoryId && categories.find(cat => cat.id === defaultCategoryId);
         setCategoryId(defaultCategory ? defaultCategoryId : (categories[0]?.id || 'common'));
         setPinned(false);
+        setHidden(false);
         setIcon('');
         setIconTone('');
         setIconToneInput('');
@@ -143,7 +146,8 @@ const LinkModal: React.FC<LinkModalProps> = ({
       iconTone: iconTone || undefined,
       description,
       categoryId,
-      pinned
+      pinned,
+      hidden
     });
 
     // 如果有自定义图标URL，缓存到本地
@@ -160,6 +164,7 @@ const LinkModal: React.FC<LinkModalProps> = ({
       setIcon('');
       setDescription('');
       setPinned(false);
+      setHidden(false);
       setIconTone('');
       setIconToneInput('');
       // 如果开启自动获取图标，尝试获取新图标
@@ -376,6 +381,19 @@ const LinkModal: React.FC<LinkModalProps> = ({
               >
                 <Pin size={13} className={pinned ? "fill-current" : ""} />
                 {pinned ? '已置顶' : '置顶'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setHidden(!hidden)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${hidden
+                  ? 'bg-slate-900/5 border-slate-300 text-slate-700 dark:bg-slate-900/40 dark:border-slate-600 dark:text-slate-200'
+                  : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-750'
+                  }`}
+                title="隐藏链接：需要密码才显示"
+              >
+                <EyeOff size={13} />
+                {hidden ? '已隐藏' : '隐藏'}
               </button>
 
               {initialData && onDelete && (

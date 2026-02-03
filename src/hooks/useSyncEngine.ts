@@ -25,6 +25,7 @@ import {
     SYNC_API_ENDPOINT,
     SYNC_META_KEY,
     SYNC_PASSWORD_KEY,
+    VIEW_PASSWORD_KEY,
     SYNC_DATA_SCHEMA_VERSION,
     getDeviceId,
     getDeviceInfo
@@ -76,9 +77,11 @@ const saveLocalSyncMeta = (meta: SyncMetadata): void => {
 
 const getAuthHeaders = (): HeadersInit => {
     const password = localStorage.getItem(SYNC_PASSWORD_KEY);
+    const viewPassword = localStorage.getItem(VIEW_PASSWORD_KEY);
     return {
         'Content-Type': 'application/json',
-        ...(password ? { 'X-Sync-Password': password } : {})
+        ...(password ? { 'X-Sync-Password': password } : {}),
+        ...(viewPassword ? { 'X-View-Password': viewPassword } : {})
     };
 };
 

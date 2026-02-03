@@ -1,6 +1,6 @@
 import React from 'react';
 import { LinkItem } from '../../types';
-import { Settings } from 'lucide-react';
+import { EyeOff, Settings } from 'lucide-react';
 import { getIconToneClass, getIconToneStyle } from '../../utils/iconTone';
 
 interface LinkCardProps {
@@ -138,6 +138,14 @@ const LinkCard: React.FC<LinkCardProps> = ({
                     >
                         <Settings size={14} />
                     </button>
+                </div>
+            )}
+
+            {/* Hidden marker */}
+            {!isBatchEditMode && link.hidden && (
+                <div className="absolute bottom-2 right-2 px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-900/5 dark:bg-white/10 text-slate-600 dark:text-slate-200 border border-slate-200/60 dark:border-white/10 flex items-center gap-1">
+                    <EyeOff size={12} />
+                    隐藏
                 </div>
             )}
 

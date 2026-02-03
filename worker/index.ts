@@ -28,6 +28,7 @@ interface KVNamespaceInterface {
 interface Env {
     YNAV_WORKER_KV: KVNamespaceInterface;
     SYNC_PASSWORD?: string;
+    VIEW_PASSWORD?: string;
     __STATIC_CONTENT: KVNamespace;
 }
 
@@ -69,7 +70,7 @@ const BACKUP_TTL_SECONDS = 30 * 24 * 60 * 60;
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Password',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Sync-Password, X-View-Password',
 };
 
 function jsonResponse(data: any, status = 200): Response {
@@ -94,6 +95,54 @@ function getWriteAuthStatus(request: Request, env: Env) {
     const passwordRequired = !!(env.SYNC_PASSWORD && env.SYNC_PASSWORD.trim() !== '');
     const canWrite = !passwordRequired || isWriteAuthenticated(request, env);
     return { passwordRequired, canWrite };
+}
+
+function isViewAuthenticated(request: Request, env: Env): boolean {
+    if (!env.VIEW_PASSWORD || env.VIEW_PASSWORD.trim() === '') {
+        return false;
+    }
+    const authHeader = request.headers.get('X-View-Password');
+    return authHeader === env.VIEW_PASSWORD;
+}
+
+function getViewAuthStatus(request: Request, env: Env) {
+    const viewPasswordRequired = !!(env.VIEW_PASSWORD && env.VIEW_PASSWORD.trim() !== '');
+    const canView = !viewPasswordRequired ? false : isViewAuthenticated(request, env);
+    return { viewPasswordRequired, canView };
+}
+
+function buildSafeData(data: YNavSyncData, includeHidden: boolean): YNavSyncData {
+    if (includeHidden) {
+        return {
+            links: data.links,
+            categories: data.categories,
+            searchConfig: data.searchConfig,
+            siteSettings: data.siteSettings,
+            schemaVersion: data.schemaVersion,
+            privateVault: undefined,
+            aiConfig: undefined,
+            meta: data.meta
+        };
+    }
+
+    const visibleCategories = (data.categories || []).filter((c: any) => !c?.hidden);
+    const visibleCategoryIds = new Set(visibleCategories.map((c: any) => c.id));
+    const visibleLinks = (data.links || []).filter((l: any) => {
+        if (l?.hidden) return false;
+        if (l?.categoryId && !visibleCategoryIds.has(l.categoryId)) return false;
+        return true;
+    });
+
+    return {
+        links: visibleLinks,
+        categories: visibleCategories,
+        searchConfig: data.searchConfig,
+        siteSettings: data.siteSettings,
+        schemaVersion: data.schemaVersion,
+        privateVault: undefined,
+        aiConfig: undefined,
+        meta: data.meta
+    };
 }
 
 const isBackupKeyValid = (backupKey: string) => (
@@ -134,10 +183,13 @@ async function handleApiSync(request: Request, env: Env): Promise<Response> {
         if (request.method === 'GET') {
             if (action === 'whoami') {
                 const auth = getWriteAuthStatus(request, env);
+                const view = getViewAuthStatus(request, env);
                 return jsonResponse({
                     success: true,
                     apiVersion: SYNC_API_VERSION,
-                    ...auth
+                    ...auth,
+                    viewPasswordRequired: view.viewPasswordRequired,
+                    canView: auth.canWrite ? true : view.canView
                 });
             }
             if (action === 'backups') {
@@ -186,22 +238,24 @@ async function handleGet(request: Request, env: Env): Promise<Response> {
     const auth = getWriteAuthStatus(request, env);
     const siteMode = (data as any)?.siteSettings?.siteMode;
     const isWebmaster = siteMode === 'webmaster';
-    if (!auth.canWrite && !isWebmaster) {
-        return jsonResponse({ success: false, apiVersion: SYNC_API_VERSION, error: 'Unauthorized' }, 401);
+    const view = getViewAuthStatus(request, env);
+
+    if (!isWebmaster) {
+        if (!auth.canWrite) {
+            return jsonResponse({ success: false, apiVersion: SYNC_API_VERSION, error: 'Unauthorized' }, 401);
+        }
+        return jsonResponse({ success: true, apiVersion: SYNC_API_VERSION, data });
     }
 
-    const publicData: YNavSyncData = {
-        links: data.links,
-        categories: data.categories,
-        searchConfig: data.searchConfig,
-        siteSettings: data.siteSettings,
-        schemaVersion: data.schemaVersion,
-        privateVault: undefined,
-        aiConfig: undefined,
-        meta: data.meta
-    };
+    if (auth.canWrite) {
+        return jsonResponse({ success: true, apiVersion: SYNC_API_VERSION, data });
+    }
 
-    return jsonResponse({ success: true, apiVersion: SYNC_API_VERSION, data: auth.canWrite ? data : publicData });
+    if (view.canView) {
+        return jsonResponse({ success: true, apiVersion: SYNC_API_VERSION, data: buildSafeData(data, true) });
+    }
+
+    return jsonResponse({ success: true, apiVersion: SYNC_API_VERSION, data: buildSafeData(data, false) });
 }
 
 async function handlePost(request: Request, env: Env): Promise<Response> {

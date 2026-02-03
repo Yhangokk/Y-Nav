@@ -20,6 +20,7 @@ interface KVNamespaceInterface {
 interface Env {
     YNAV_KV: KVNamespaceInterface;
     SYNC_PASSWORD?: string; // 可选的同步密码
+    VIEW_PASSWORD?: string; // 可选的只读查看密码（用于解锁隐藏内容）
 }
 
 interface SyncMetadata {
@@ -91,16 +92,71 @@ const getWriteAuthStatus = (request: Request, env: Env) => {
     return { passwordRequired, canWrite };
 };
 
+// 辅助函数：验证只读查看密码（用于解锁隐藏内容，但不授予写权限）
+const isViewAuthenticated = (request: Request, env: Env): boolean => {
+    // 未配置 VIEW_PASSWORD 时，不提供“只读解锁隐藏内容”能力（避免误以为安全）。
+    if (!env.VIEW_PASSWORD || env.VIEW_PASSWORD.trim() === '') {
+        return false;
+    }
+    const authHeader = request.headers.get('X-View-Password');
+    return authHeader === env.VIEW_PASSWORD;
+};
+
+const getViewAuthStatus = (request: Request, env: Env) => {
+    const viewPasswordRequired = !!(env.VIEW_PASSWORD && env.VIEW_PASSWORD.trim() !== '');
+    const canView = !viewPasswordRequired ? false : isViewAuthenticated(request, env);
+    return { viewPasswordRequired, canView };
+};
+
 async function handleWhoAmI(request: Request, env: Env): Promise<Response> {
     const { passwordRequired, canWrite } = getWriteAuthStatus(request, env);
+    const { viewPasswordRequired, canView } = getViewAuthStatus(request, env);
     return new Response(JSON.stringify({
         success: true,
         apiVersion: SYNC_API_VERSION,
         passwordRequired,
-        canWrite
+        canWrite,
+        viewPasswordRequired,
+        // If canWrite, also allow viewing hidden (but server still strips sensitive fields for public endpoints when needed)
+        canView: canWrite ? true : canView
     }), {
         headers: { 'Content-Type': 'application/json' }
     });
+}
+
+function buildSafeData(data: YNavSyncData, includeHidden: boolean): YNavSyncData {
+    if (includeHidden) {
+        return {
+            links: data.links,
+            categories: data.categories,
+            searchConfig: data.searchConfig,
+            siteSettings: data.siteSettings,
+            schemaVersion: data.schemaVersion,
+            privateVault: undefined,
+            aiConfig: undefined,
+            meta: data.meta
+        };
+    }
+
+    const visibleCategories = (data.categories || []).filter((c: any) => !c?.hidden);
+    const visibleCategoryIds = new Set(visibleCategories.map((c: any) => c.id));
+    const visibleLinks = (data.links || []).filter((l: any) => {
+        if (l?.hidden) return false;
+        // If the category is hidden, the link is also hidden.
+        if (l?.categoryId && !visibleCategoryIds.has(l.categoryId)) return false;
+        return true;
+    });
+
+    return {
+        links: visibleLinks,
+        categories: visibleCategories,
+        searchConfig: data.searchConfig,
+        siteSettings: data.siteSettings,
+        schemaVersion: data.schemaVersion,
+        privateVault: undefined,
+        aiConfig: undefined,
+        meta: data.meta
+    };
 }
 
 // GET /api/sync - 读取云端数据
@@ -120,34 +176,38 @@ async function handleGet(request: Request, env: Env): Promise<Response> {
         }
 
         const auth = getWriteAuthStatus(request, env);
+        const viewAuth = getViewAuthStatus(request, env);
         // Public read is only allowed in webmaster mode, and only returns a safe subset.
         const siteMode = (data as any)?.siteSettings?.siteMode;
         const isWebmaster = siteMode === 'webmaster';
 
-        if (!auth.canWrite && !isWebmaster) {
+        if (!isWebmaster) {
+            // Personal mode: only allow admin read.
+            if (!auth.canWrite) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    apiVersion: SYNC_API_VERSION,
+                    error: 'Unauthorized'
+                }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            }
             return new Response(JSON.stringify({
-                success: false,
+                success: true,
                 apiVersion: SYNC_API_VERSION,
-                error: 'Unauthorized'
-            }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+                data
+            }), { headers: { 'Content-Type': 'application/json' } });
         }
 
-        const publicData: YNavSyncData = {
-            links: data.links,
-            categories: data.categories,
-            searchConfig: data.searchConfig,
-            siteSettings: data.siteSettings,
-            schemaVersion: data.schemaVersion,
-            // Never expose private vault or AI keys to public visitors
-            privateVault: undefined,
-            aiConfig: undefined,
-            meta: data.meta
-        };
+        // Webmaster mode:
+        // - canWrite => full (includes privateVault/aiConfig)
+        // - canView  => safe subset but includes hidden links/categories
+        // - public   => safe subset without hidden
 
         return new Response(JSON.stringify({
             success: true,
             apiVersion: SYNC_API_VERSION,
-            data: auth.canWrite ? data : publicData
+            data: auth.canWrite
+                ? data
+                : (viewAuth.canView ? buildSafeData(data, true) : buildSafeData(data, false))
         }), {
             headers: { 'Content-Type': 'application/json' }
         });

@@ -110,6 +110,21 @@ export function useContextMenu({
         closeContextMenu();
     }, [contextMenu.link, links, categories, updateData, closeContextMenu]);
 
+    const toggleHiddenFromContextMenu = useCallback(() => {
+        if (!contextMenu.link) return;
+
+        const linkToToggle = links.find(l => l.id === contextMenu.link!.id);
+        if (!linkToToggle) return;
+
+        const updated = links.map(l => (
+            l.id === contextMenu.link!.id
+                ? { ...l, hidden: !l.hidden }
+                : l
+        ));
+        updateData(updated, categories);
+        closeContextMenu();
+    }, [contextMenu.link, links, categories, updateData, closeContextMenu]);
+
     const duplicateLinkFromContextMenu = useCallback(() => {
         if (!contextMenu.link) return;
         const newLink: LinkItem = {
@@ -141,6 +156,7 @@ export function useContextMenu({
         editLinkFromContextMenu,
         deleteLinkFromContextMenu,
         togglePinFromContextMenu,
+        toggleHiddenFromContextMenu,
         duplicateLinkFromContextMenu,
         moveLinkFromContextMenu
     };

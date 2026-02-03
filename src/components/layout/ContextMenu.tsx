@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Copy, Edit2, Trash2, Pin, CopyPlus, FolderInput, ChevronRight } from 'lucide-react';
+import { Copy, Edit2, Trash2, Pin, CopyPlus, FolderInput, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Category } from '../../types';
 
 interface ContextMenuProps {
@@ -7,6 +7,7 @@ interface ContextMenuProps {
   position: { x: number; y: number };
   categories: Category[];
   readOnly?: boolean;
+  linkHidden?: boolean;
   onClose: () => void;
   onCopyLink: () => void;
   onEditLink: () => void;
@@ -14,6 +15,7 @@ interface ContextMenuProps {
   onMoveLink: (categoryId: string) => void;
   onDeleteLink: () => void;
   onTogglePin: () => void;
+  onToggleHidden: () => void;
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -21,13 +23,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   position,
   categories,
   readOnly = false,
+  linkHidden = false,
   onClose,
   onCopyLink,
   onEditLink,
   onDuplicateLink,
   onMoveLink,
   onDeleteLink,
-  onTogglePin
+  onTogglePin,
+  onToggleHidden
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +84,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
         onClick: () => { },
         hasSubmenu: true
       },
+      { icon: linkHidden ? Eye : EyeOff, label: linkHidden ? '取消隐藏' : '隐藏链接', onClick: onToggleHidden },
       { icon: Edit2, label: '编辑链接', onClick: onEditLink },
       { icon: Pin, label: '置顶/取消置顶', onClick: onTogglePin },
       { icon: Trash2, label: '删除链接', onClick: onDeleteLink, className: 'text-red-500 dark:text-red-400' }

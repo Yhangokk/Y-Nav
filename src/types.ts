@@ -7,6 +7,7 @@ export interface LinkItem {
   description?: string;
   categoryId: string;
   createdAt: number;
+  hidden?: boolean; // Hidden (requires password to reveal in webmaster mode)
   pinned?: boolean; // New field for pinning
   pinnedOrder?: number; // Field for pinned link sorting order
   order?: number; // Field for sorting order
@@ -16,6 +17,7 @@ export interface Category {
   id: string;
   name: string;
   icon: string; // Lucide icon name or emoji
+  hidden?: boolean; // Hidden category (requires password to reveal in webmaster mode)
 }
 
 export interface SiteSettings {

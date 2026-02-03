@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, Palette, Square, CheckSquare } from 'lucide-react';
+import { X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, Palette, Square, CheckSquare, Eye, EyeOff } from 'lucide-react';
 import { Category } from '../../types';
 import { useDialog } from '../ui/DialogProvider';
 import Icon from '../ui/Icon';
@@ -27,9 +27,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('');
+  const [editHidden, setEditHidden] = useState(false);
 
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('Folder');
+  const [newCatHidden, setNewCatHidden] = useState(false);
 
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
   const [iconSelectorTarget, setIconSelectorTarget] = useState<'edit' | 'new' | null>(null);
@@ -151,6 +153,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     setEditingId(cat.id);
     setEditName(cat.name);
     setEditIcon(cat.icon);
+    setEditHidden(!!cat.hidden);
   };
 
   const saveEdit = () => {
@@ -158,7 +161,8 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     const newCats = categories.map(c => c.id === editingId ? {
       ...c,
       name: editName.trim(),
-      icon: editIcon
+      icon: editIcon,
+      hidden: editHidden
     } : c);
     onUpdateCategories(newCats);
     setEditingId(null);
@@ -169,11 +173,13 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     const newCat: Category = {
       id: Date.now().toString(),
       name: newCatName.trim(),
-      icon: newCatIcon
+      icon: newCatIcon,
+      hidden: newCatHidden
     };
     onUpdateCategories([...categories, newCat]);
     setNewCatName('');
     setNewCatIcon('Folder');
+    setNewCatHidden(false);
   };
 
   const openIconSelector = (target: 'edit' | 'new') => {
@@ -319,6 +325,14 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                         >
                           <Palette size={16} />
                         </button>
+                        <button
+                          type="button"
+                          className={`p-1 transition-colors ${editHidden ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                          onClick={() => setEditHidden(!editHidden)}
+                          title={editHidden ? '已隐藏（需要密码显示）' : '设为隐藏（需要密码显示）'}
+                        >
+                          {editHidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -326,6 +340,12 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       <Icon name={cat.icon} size={16} />
                       <span className="font-medium dark:text-slate-200 truncate">
                         {cat.name}
+                        {cat.hidden && (
+                          <span className="ml-2 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                            <EyeOff size={12} />
+                            隐藏
+                          </span>
+                        )}
                         {cat.id === 'common' && (
                           <span className="ml-2 text-xs text-slate-400">(默认分类)</span>
                         )}
@@ -341,6 +361,16 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       <button onClick={saveEdit} className="text-green-500 hover:bg-green-50 dark:hover:bg-slate-600 p-1.5 rounded bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-600"><Check size={16} /></button>
                     ) : (
                       <>
+                        <button
+                          onClick={() => {
+                            const newCats = categories.map(c => c.id === cat.id ? { ...c, hidden: !c.hidden } : c);
+                            onUpdateCategories(newCats);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
+                          title={cat.hidden ? '取消隐藏' : '设为隐藏'}
+                        >
+                          {cat.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
                         <button onClick={() => handleStartEdit(cat)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded">
                           <Edit2 size={14} />
                         </button>
@@ -378,6 +408,14 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 title="选择图标"
               >
                 <Palette size={16} />
+              </button>
+              <button
+                type="button"
+                className={`p-1 transition-colors ${newCatHidden ? 'text-slate-700 dark:text-slate-200' : 'text-gray-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                onClick={() => setNewCatHidden(!newCatHidden)}
+                title={newCatHidden ? '已隐藏（需要密码显示）' : '设为隐藏（需要密码显示）'}
+              >
+                {newCatHidden ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             <div className="flex justify-end">

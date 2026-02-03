@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Database, Upload, Cloud, Lock, Eye, EyeOff, RefreshCw, Clock, Cpu, CloudUpload, CloudDownload, Trash2 } from 'lucide-react';
 import { SiteSettings, SyncStatus } from '../../../types';
-import { SYNC_API_ENDPOINT, SYNC_META_KEY, SYNC_PASSWORD_KEY, SYNC_API_VERSION, SYNC_DATA_SCHEMA_VERSION } from '../../../utils/constants';
+import { SYNC_API_ENDPOINT, SYNC_META_KEY, SYNC_PASSWORD_KEY, VIEW_PASSWORD_KEY, SYNC_API_VERSION, SYNC_DATA_SCHEMA_VERSION } from '../../../utils/constants';
 
 interface DataTabProps {
     onOpenImport: () => void;
@@ -10,6 +10,7 @@ interface DataTabProps {
     onRestoreBackup: (backupKey: string) => Promise<boolean>;
     onDeleteBackup: (backupKey: string) => Promise<boolean>;
     onSyncPasswordChange: (password: string) => void;
+    onViewPasswordChange: (password: string) => void;
     useSeparatePrivacyPassword: boolean;
     onMigratePrivacyMode: (payload: { useSeparatePassword: boolean; oldPassword: string; newPassword: string }) => Promise<boolean>;
     privacyGroupEnabled: boolean;
@@ -44,6 +45,7 @@ const DataTab: React.FC<DataTabProps> = ({
     onRestoreBackup,
     onDeleteBackup,
     onSyncPasswordChange,
+    onViewPasswordChange,
     useSeparatePrivacyPassword,
     onMigratePrivacyMode,
     privacyGroupEnabled,
@@ -59,6 +61,8 @@ const DataTab: React.FC<DataTabProps> = ({
 }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [viewPassword, setViewPassword] = useState('');
+    const [showViewPassword, setShowViewPassword] = useState(false);
     const [backups, setBackups] = useState<BackupItem[]>([]);
     const [isLoadingBackups, setIsLoadingBackups] = useState(false);
     const [backupError, setBackupError] = useState<string | null>(null);
@@ -70,7 +74,7 @@ const DataTab: React.FC<DataTabProps> = ({
     const [remoteInfo, setRemoteInfo] = useState<{ apiVersion?: string; schemaVersion?: number; meta?: any } | null>(null);
     const [remoteError, setRemoteError] = useState<string | null>(null);
     const [isLoadingRemote, setIsLoadingRemote] = useState(false);
-    const [authInfo, setAuthInfo] = useState<{ passwordRequired: boolean; canWrite: boolean } | null>(null);
+    const [authInfo, setAuthInfo] = useState<{ passwordRequired: boolean; canWrite: boolean; viewPasswordRequired?: boolean; canView?: boolean } | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
     const [isCheckingAuth, setIsCheckingAuth] = useState(false);
     const [privacyTarget, setPrivacyTarget] = useState<'sync' | 'separate' | null>(null);
@@ -83,6 +87,7 @@ const DataTab: React.FC<DataTabProps> = ({
 
     useEffect(() => {
         setPassword(localStorage.getItem(SYNC_PASSWORD_KEY) || '');
+        setViewPassword(localStorage.getItem(VIEW_PASSWORD_KEY) || '');
     }, []);
 
     useEffect(() => {
@@ -103,11 +108,20 @@ const DataTab: React.FC<DataTabProps> = ({
 
     const getAuthHeaders = useCallback(() => {
         const storedPassword = localStorage.getItem(SYNC_PASSWORD_KEY);
+        const storedViewPassword = localStorage.getItem(VIEW_PASSWORD_KEY);
         return {
             'Content-Type': 'application/json',
-            ...(storedPassword ? { 'X-Sync-Password': storedPassword } : {})
+            ...(storedPassword ? { 'X-Sync-Password': storedPassword } : {}),
+            ...(storedViewPassword ? { 'X-View-Password': storedViewPassword } : {})
         };
     }, []);
+
+    const handleViewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newVal = e.target.value;
+        setViewPassword(newVal);
+        localStorage.setItem(VIEW_PASSWORD_KEY, newVal);
+        onViewPasswordChange(newVal);
+    };
 
     const formatBackupTime = (backup: BackupItem) => {
         if (backup.updatedAt) {
@@ -193,7 +207,7 @@ const DataTab: React.FC<DataTabProps> = ({
         }
     }, [getAuthHeaders]);
 
-    const fetchAuthInfo = useCallback(async (): Promise<{ passwordRequired: boolean; canWrite: boolean } | null> => {
+    const fetchAuthInfo = useCallback(async (): Promise<{ passwordRequired: boolean; canWrite: boolean; viewPasswordRequired?: boolean; canView?: boolean } | null> => {
         setIsCheckingAuth(true);
         setAuthError(null);
         try {
@@ -204,7 +218,12 @@ const DataTab: React.FC<DataTabProps> = ({
                 setAuthError(result.error || '鉴权检查失败');
                 return null;
             }
-            const next = { passwordRequired: !!result.passwordRequired, canWrite: !!result.canWrite };
+            const next = {
+                passwordRequired: !!result.passwordRequired,
+                canWrite: !!result.canWrite,
+                viewPasswordRequired: !!result.viewPasswordRequired,
+                canView: !!result.canView
+            };
             setAuthInfo(next);
             return next;
         } catch (error: any) {
@@ -318,6 +337,8 @@ const DataTab: React.FC<DataTabProps> = ({
     const isWebmaster = siteSettings?.siteMode === 'webmaster';
     const canWrite = authInfo?.canWrite ?? false;
     const passwordRequired = authInfo?.passwordRequired ?? false;
+    const canViewHidden = authInfo?.canView ?? false;
+    const viewPasswordRequired = authInfo?.viewPasswordRequired ?? false;
     const isAdmin = canWrite && (!isWebmaster || webmasterUnlocked);
 
     useEffect(() => {
@@ -335,7 +356,7 @@ const DataTab: React.FC<DataTabProps> = ({
 
     useEffect(() => {
         fetchAuthInfo();
-    }, [fetchAuthInfo, password]);
+    }, [fetchAuthInfo, password, viewPassword]);
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -357,12 +378,12 @@ const DataTab: React.FC<DataTabProps> = ({
                         </div>
                     </div>
 
-                    {/* API Password Input */}
-                    <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800/50">
-                        <label className="block text-xs font-bold text-green-800 dark:text-green-200 mb-2 flex items-center gap-1.5">
-                            <Lock size={12} />
-                            API 访问密码 (可选)
-                        </label>
+	                    {/* API Password Input */}
+	                    <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-800/50">
+	                        <label className="block text-xs font-bold text-green-800 dark:text-green-200 mb-2 flex items-center gap-1.5">
+	                            <Lock size={12} />
+	                            API 访问密码 (可选)
+	                        </label>
                         <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
@@ -379,11 +400,38 @@ const DataTab: React.FC<DataTabProps> = ({
                                 {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                             </button>
                         </div>
-                        <p className="text-[10px] text-green-600/80 dark:text-green-400/80 mt-1.5 leading-relaxed">
-                            如需增强安全性，请在 Cloudflare Pages 后台设置 <code>SYNC_PASSWORD</code> 环境变量，并在此处输入相同密码。
-                        </p>
-                    </div>
-                </div>
+	                        <p className="text-[10px] text-green-600/80 dark:text-green-400/80 mt-1.5 leading-relaxed">
+	                            如需增强安全性，请在 Cloudflare Pages 后台设置 <code>SYNC_PASSWORD</code> 环境变量，并在此处输入相同密码。
+	                        </p>
+	                    </div>
+
+	                    {/* View Password Input (reveal hidden links/categories in webmaster mode) */}
+	                    <div className="mt-3 pt-3 border-t border-green-200/70 dark:border-green-800/40">
+	                        <label className="block text-xs font-bold text-green-800 dark:text-green-200 mb-2 flex items-center gap-1.5">
+	                            <EyeOff size={12} />
+	                            隐藏内容密码 (可选)
+	                        </label>
+	                        <div className="relative">
+	                            <input
+	                                type={showViewPassword ? "text" : "password"}
+	                                value={viewPassword}
+	                                onChange={handleViewPasswordChange}
+	                                placeholder="未设置密码"
+	                                className="w-full pl-3 pr-10 py-2 bg-white dark:bg-slate-900 border border-green-200 dark:border-green-800 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all"
+	                            />
+	                            <button
+	                                type="button"
+	                                onClick={() => setShowViewPassword(!showViewPassword)}
+	                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+	                            >
+	                                {showViewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+	                            </button>
+	                        </div>
+	                        <p className="text-[10px] text-green-600/80 dark:text-green-400/80 mt-1.5 leading-relaxed">
+	                            站长模式下可用于“只读解锁隐藏内容”。在 Cloudflare 后台设置 <code>VIEW_PASSWORD</code> 环境变量后生效。
+	                        </p>
+	                    </div>
+	                </div>
 
                 {/* Sync Status */}
                 <div className="mb-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/40">
@@ -403,17 +451,22 @@ const DataTab: React.FC<DataTabProps> = ({
                         </button>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            站点模式：{isWebmaster ? '站长模式(只读)' : '个人模式'}
-                        </span>
-                        <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            写权限：{canWrite ? '有' : '无'}{passwordRequired ? '' : '（未设置密码）'}
-                        </span>
-                        {authError && (
-                            <span className="text-red-600 dark:text-red-400 break-all">{authError}</span>
-                        )}
-                    </div>
+	                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+	                        <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+	                            站点模式：{isWebmaster ? '站长模式(只读)' : '个人模式'}
+	                        </span>
+	                        <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+	                            写权限：{canWrite ? '有' : '无'}{passwordRequired ? '' : '（未设置密码）'}
+	                        </span>
+	                        {isWebmaster && (
+	                            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+	                                隐藏内容：{canViewHidden ? '已解锁' : '未解锁'}{viewPasswordRequired ? '' : '（未设置 VIEW_PASSWORD）'}
+	                            </span>
+	                        )}
+	                        {authError && (
+	                            <span className="text-red-600 dark:text-red-400 break-all">{authError}</span>
+	                        )}
+	                    </div>
 
                     {isWebmaster && !isAdmin && (
                         <div className="mt-3 text-xs text-amber-700 dark:text-amber-300">
