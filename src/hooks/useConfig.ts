@@ -10,8 +10,8 @@ const DEFAULT_AI_CONFIG: AIConfig = {
 };
 
 const DEFAULT_SITE_SETTINGS: SiteSettings = {
-    title: '元启 - AI 智能导航',
-    navTitle: '元启',
+    title: '芝士 - AI 智能导航',
+    navTitle: '芝士',
     favicon: '',
     cardStyle: 'detailed',
     siteMode: 'personal',

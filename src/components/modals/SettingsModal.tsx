@@ -64,8 +64,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>('site');
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
   const [localSiteSettings, setLocalSiteSettings] = useState<SiteSettings>(() => ({
-    title: siteSettings?.title || '元启 - AI 智能导航',
-    navTitle: siteSettings?.navTitle || '元启',
+    title: siteSettings?.title || '芝士 - AI 智能导航',
+    navTitle: siteSettings?.navTitle || '芝士',
     favicon: siteSettings?.favicon || '',
     cardStyle: siteSettings?.cardStyle || 'detailed',
     siteMode: siteSettings?.siteMode || 'personal',
@@ -81,8 +81,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (isOpen) {
       setLocalConfig(config);
       setLocalSiteSettings({
-        title: siteSettings?.title || '元启 - AI 智能导航',
-        navTitle: siteSettings?.navTitle || '元启',
+        title: siteSettings?.title || '芝士 - AI 智能导航',
+        navTitle: siteSettings?.navTitle || '芝士',
         favicon: siteSettings?.favicon || '',
         cardStyle: siteSettings?.cardStyle || 'detailed',
         siteMode: siteSettings?.siteMode || 'personal',
