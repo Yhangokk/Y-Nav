@@ -153,7 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               {/* Visible animated content */}
               <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center">
                 <span className="text-accent mr-1.5">~/</span>
-                <span className="text-slate-700 dark:text-slate-200 tracking-tight">Y-</span>
+                <span className="text-slate-700 dark:text-slate-200 tracking-tight">芝士-</span>
                 <span className="text-slate-700 dark:text-slate-200 tracking-tight">{displayText}</span>
                 <span className="w-2.5 h-5 bg-accent ml-1 animate-pulse rounded-[2px] opacity-80 shadow-[0_0_8px_rgb(var(--accent-color)/0.6)]"></span>
               </div>

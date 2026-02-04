@@ -101,7 +101,7 @@ export function useConfig() {
     }, [siteSettings.title, siteSettings.favicon]);
 
     // Derived values
-    const navTitleText = siteSettings.navTitle || '元启';
+    const navTitleText = siteSettings.navTitle || '芝士';
     const navTitleShort = navTitleText.slice(0, 2);
 
     return {
