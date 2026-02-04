@@ -145,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               {/* Ghost element for layout sizing (holds the widest possible width) */}
               <div className="flex items-center opacity-0 pointer-events-none" aria-hidden="true">
                 <span className="mr-1.5">~/</span>
-                <span className="tracking-tight">Y-</span>
+                <span className="tracking-tight">芝士-</span>
                 <span className="tracking-tight">00:00</span>
                 <span className="w-2.5 ml-1"></span>
               </div>
